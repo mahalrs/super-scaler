@@ -12,15 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
+import os
+import time
+
+import utils
+
 import torch
 import torch.nn.functional as F
 
 from tqdm import tqdm
-
-import copy
-import time
-import shutil
-import os
 
 
 def calculate_psnr(batch_pred, batch_gt, max_val=1.0):
@@ -104,11 +105,18 @@ def evaluate(model, device, data_loader, criterion):
 
 
 def train(model, device, train_loader, criterion, optimizer, scheduler,
-          num_epochs):
+          num_epochs, output_dir, checkpoint_path):
     history = {'loss': [], 'psnr': []}
-    start = time.time()
+    if checkpoint_path:
+        history = utils.load_checkpoint(checkpoint_path)
+        start_epoch = history['epoch'] + 1
 
-    for epoch in range(num_epochs):
+        model.load_state_dict(history['model_state_dict'])
+        optimizer.load_state_dict(history['optimizer_state_dict'])
+        scheduler.load_state_dict(history['scheduler_state_dict'])
+
+    start = time.time()
+    for epoch in range(start_epoch, num_epochs):
         print(f'Epoch {epoch + 1}/{num_epochs}')
         print('-' * 10)
 
@@ -119,7 +127,14 @@ def train(model, device, train_loader, criterion, optimizer, scheduler,
 
         print(f'loss: {loss:.4f} psnr: {psnr}')
         print()
-        # save checkpoint
+
+        # Save checkpoint
+        history['model_state_dict'] = model.state_dict()
+        history['optimizer_state_dict'] = optimizer.state_dict()
+        history['scheduler_state_dict'] = scheduler.state_dict()
+        history['epoch'] = epoch
+
+        utils.save_checkpoint(history, output_dir)
 
     end = time.time() - start
     print(f'Finished training: {end // 60:.0f}m {end % 60:.0f}')
@@ -128,14 +143,25 @@ def train(model, device, train_loader, criterion, optimizer, scheduler,
 
 
 def train_and_evaluate(model, device, train_loader, val_loader, criterion,
-                       optimizer, scheduler, num_epochs):
+                       optimizer, scheduler, num_epochs, output_dir,
+                       checkpoint_path):
     history = {'loss': [], 'psnr': [], 'val_loss': [], 'val_psnr': []}
-    start = time.time()
-
     best_model_wts = copy.deepcopy(model.state_dict())
     best_psnr = 0.0
+    start_epoch = 0
 
-    for epoch in range(num_epochs):
+    if checkpoint_path:
+        history = utils.load_checkpoint(checkpoint_path)
+        best_model_wts = history['best_model_state_dict']
+        best_psnr = history['best_psnr']
+        start_epoch = history['epoch'] + 1
+
+        model.load_state_dict(history['model_state_dict'])
+        optimizer.load_state_dict(history['optimizer_state_dict'])
+        scheduler.load_state_dict(history['scheduler_state_dict'])
+
+    start = time.time()
+    for epoch in range(start_epoch, num_epochs):
         print(f'Epoch {epoch + 1}/{num_epochs}')
         print('-' * 10)
 
@@ -152,12 +178,20 @@ def train_and_evaluate(model, device, train_loader, val_loader, criterion,
             f'loss: {loss:.4f} psnr: {psnr} val_loss: {val_loss} val_psnr: {val_psnr}'
         )
         print()
-        # save checkpoint
+
+        # Save checkpoint
+        history['model_state_dict'] = model.state_dict()
+        history['optimizer_state_dict'] = optimizer.state_dict()
+        history['scheduler_state_dict'] = scheduler.state_dict()
+        history['best_model_state_dict'] = best_model_wts
+        history['best_psnr'] = best_psnr
+        history['epoch'] = epoch
+
+        utils.save_checkpoint(history, output_dir, is_best=val_psnr > best_psnr)
 
         if val_psnr > best_psnr:
             best_psnr = val_psnr
             best_model_wts = copy.deepcopy(model.state_dict())
-            # save best model
 
     end = time.time() - start
     print(f'Finished training: {end // 60:.0f}m {end % 60:.0f}')
@@ -167,10 +201,3 @@ def train_and_evaluate(model, device, train_loader, val_loader, criterion,
     model.load_state_dict(best_model_wts)
 
     return history, model
-
-
-def save_checkpoint(state, is_best, save_dir, filename='checkpoint.pth'):
-    p = os.path.join(save_dir, filename)
-    torch.save(state, p)
-    if is_best:
-        shutil.copyfile(p, os.path.join(save_dir, 'best_model.pth'))
