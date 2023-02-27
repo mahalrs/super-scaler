@@ -18,7 +18,7 @@ import os
 import utils
 from dataset import get_training_set, get_validation_set
 from models import SRCNN
-from train import train_and_evaluate
+from train import train
 
 import torch
 import torch.nn as nn
@@ -85,16 +85,23 @@ def main():
     criterion = nn.MSELoss()
     optimizer = optim.Adam(net.parameters(), lr=params.learning_rate)
 
-    # Decay LR by a factor of 0.1 every 7 epochs
+    # Decay LR by a factor of gamma every step_size epochs
     scheduler = optim.lr_scheduler.StepLR(optimizer,
                                           step_size=params.step_size,
                                           gamma=params.gamma)
 
     # Train and evaluate the model
-    history, net = train_and_evaluate(net, params.device, train_loader,
-                                      val_loader, criterion, optimizer,
-                                      scheduler, params.num_epochs,
-                                      args.exp_dir, args.resume)
+    history, net = train(net,
+                         params.device,
+                         train_loader,
+                         criterion,
+                         optimizer,
+                         scheduler,
+                         params.num_epochs,
+                         val_loader=val_loader,
+                         verbose=1,
+                         output_dir=args.exp_dir,
+                         checkpoint_path=args.resume)
 
 
 if __name__ == '__main__':

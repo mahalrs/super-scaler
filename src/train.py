@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import copy
-import os
 import time
 
 import utils
@@ -71,6 +70,72 @@ def training_step(model, device, data_loader, criterion, optimizer, scheduler):
     return avg_loss, avg_psnr
 
 
+def train(model,
+          device,
+          train_loader,
+          criterion,
+          optimizer,
+          scheduler,
+          num_epochs,
+          val_loader=None,
+          verbose=1,
+          output_dir='./',
+          checkpoint_path=None):
+
+    history = make_new_history_obj(model, optimizer, scheduler,
+                                   (val_loader is not None), checkpoint_path)
+
+    start = time.time()
+    for epoch in range(history['start_epoch'], num_epochs):
+        print(f'Epoch {epoch + 1}/{num_epochs}')
+        print('-' * 10)
+
+        loss, psnr = training_step(model, device, train_loader, criterion,
+                                   optimizer, scheduler)
+        history['loss'].append(loss)
+        history['psnr'].append(psnr)
+
+        log_info = f'loss: {loss:.4f} psnr: {psnr}'
+
+        is_best_model = False
+        if val_loader:
+            val_loss, val_psnr = evaluate(model, device, val_loader, criterion)
+            history['val_loss'].append(val_loss)
+            history['val_psnr'].append(val_psnr)
+
+            if val_psnr > history['best_psnr']:
+                is_best_model = True
+
+                history['best_model_state_dict'] = copy.deepcopy(
+                    model.state_dict())
+                history['best_loss'] = val_loss
+                history['best_psnr'] = val_psnr
+
+            log_info += f' val_loss: {val_loss} val_psnr: {val_psnr}'
+
+        if verbose:
+            print(log_info, end='\n\n')
+
+        # Save checkpoint
+        history['model_state_dict'] = model.state_dict()
+        history['optimizer_state_dict'] = optimizer.state_dict()
+        history['scheduler_state_dict'] = scheduler.state_dict()
+        history['epoch'] = epoch
+
+        utils.save_checkpoint(history, output_dir, is_best=is_best_model)
+
+    end = time.time() - start
+    print(f'Finished training: {end // 60:.0f}m {end % 60:.0f}')
+
+    if val_loader:
+        print(f"Best PSNR: {history['best_psnr']:4f}")
+
+        # load best model weights
+        model.load_state_dict(history['best_model_state_dict'])
+
+    return history, model
+
+
 def evaluate(model, device, data_loader, criterion):
     # switch to evaluate mode
     was_training = model.training
@@ -104,100 +169,33 @@ def evaluate(model, device, data_loader, criterion):
     return avg_loss, avg_psnr
 
 
-def train(model, device, train_loader, criterion, optimizer, scheduler,
-          num_epochs, output_dir, checkpoint_path):
-    history = {'loss': [], 'psnr': []}
+def make_new_history_obj(model,
+                         optimizer,
+                         scheduler,
+                         validation=False,
+                         checkpoint_path=None):
     if checkpoint_path:
         history = utils.load_checkpoint(checkpoint_path)
-        start_epoch = history['epoch'] + 1
+        history['start_epoch'] = history['epoch'] + 1
 
         model.load_state_dict(history['model_state_dict'])
         optimizer.load_state_dict(history['optimizer_state_dict'])
         scheduler.load_state_dict(history['scheduler_state_dict'])
 
-    start = time.time()
-    for epoch in range(start_epoch, num_epochs):
-        print(f'Epoch {epoch + 1}/{num_epochs}')
-        print('-' * 10)
+        return history
 
-        loss, psnr = training_step(model, device, train_loader, criterion,
-                                   optimizer, scheduler)
-        history['loss'].append(loss)
-        history['psnr'].append(psnr)
+    history = {
+        'loss': [],
+        'psnr': [],
+        'val_loss': [],
+        'val_psnr': [],
+        'start_epoch': 0,
+        'best_model_state_dict': None,
+        'best_loss': 0.0,
+        'best_psnr': 0.0
+    }
 
-        print(f'loss: {loss:.4f} psnr: {psnr}')
-        print()
+    if validation:
+        history['best_model_state_dict'] = copy.deepcopy(model.state_dict())
 
-        # Save checkpoint
-        history['model_state_dict'] = model.state_dict()
-        history['optimizer_state_dict'] = optimizer.state_dict()
-        history['scheduler_state_dict'] = scheduler.state_dict()
-        history['epoch'] = epoch
-
-        utils.save_checkpoint(history, output_dir)
-
-    end = time.time() - start
-    print(f'Finished training: {end // 60:.0f}m {end % 60:.0f}')
-
-    return history, model
-
-
-def train_and_evaluate(model, device, train_loader, val_loader, criterion,
-                       optimizer, scheduler, num_epochs, output_dir,
-                       checkpoint_path):
-    history = {'loss': [], 'psnr': [], 'val_loss': [], 'val_psnr': []}
-    best_model_wts = copy.deepcopy(model.state_dict())
-    best_psnr = 0.0
-    start_epoch = 0
-
-    if checkpoint_path:
-        history = utils.load_checkpoint(checkpoint_path)
-        best_model_wts = history['best_model_state_dict']
-        best_psnr = history['best_psnr']
-        start_epoch = history['epoch'] + 1
-
-        model.load_state_dict(history['model_state_dict'])
-        optimizer.load_state_dict(history['optimizer_state_dict'])
-        scheduler.load_state_dict(history['scheduler_state_dict'])
-
-    start = time.time()
-    for epoch in range(start_epoch, num_epochs):
-        print(f'Epoch {epoch + 1}/{num_epochs}')
-        print('-' * 10)
-
-        loss, psnr = training_step(model, device, train_loader, criterion,
-                                   optimizer, scheduler)
-        val_loss, val_psnr = evaluate(model, device, val_loader, criterion)
-
-        history['loss'].append(loss)
-        history['psnr'].append(psnr)
-        history['val_loss'].append(val_loss)
-        history['val_psnr'].append(val_psnr)
-
-        print(
-            f'loss: {loss:.4f} psnr: {psnr} val_loss: {val_loss} val_psnr: {val_psnr}'
-        )
-        print()
-
-        # Save checkpoint
-        history['model_state_dict'] = model.state_dict()
-        history['optimizer_state_dict'] = optimizer.state_dict()
-        history['scheduler_state_dict'] = scheduler.state_dict()
-        history['best_model_state_dict'] = best_model_wts
-        history['best_psnr'] = best_psnr
-        history['epoch'] = epoch
-
-        utils.save_checkpoint(history, output_dir, is_best=val_psnr > best_psnr)
-
-        if val_psnr > best_psnr:
-            best_psnr = val_psnr
-            best_model_wts = copy.deepcopy(model.state_dict())
-
-    end = time.time() - start
-    print(f'Finished training: {end // 60:.0f}m {end % 60:.0f}')
-    print(f'Best PSNR: {best_psnr:4f}')
-
-    # load best model weights
-    model.load_state_dict(best_model_wts)
-
-    return history, model
+    return history
