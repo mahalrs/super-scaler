@@ -75,7 +75,7 @@ def main():
     val_set = get_validation_set(params.input_size, params.output_size,
                                  params.crop_size, params.upscale_factor)
     val_loader = DataLoader(val_set,
-                            batch_size=params.batch_size,
+                            batch_size=params.valbatch_size,
                             shuffle=True,
                             num_workers=params.num_workers,
                             pin_memory=True)
