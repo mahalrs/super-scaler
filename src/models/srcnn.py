@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import torch.nn as nn
+import torch.nn.init as init
 import torch.nn.functional as F
 
 
@@ -25,9 +26,16 @@ class SRCNN(nn.Module):
         self.conv2 = nn.Conv2d(64, 32, 1, padding=2, padding_mode='replicate')
         self.conv3 = nn.Conv2d(32, 3, 5, padding=2, padding_mode='replicate')
 
+        self._initialize_weights()
+
     def forward(self, x):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = self.conv3(x)
 
         return x
+
+    def _initialize_weights(self):
+        init.kaiming_normal_(self.conv1.weight, init.calculate_gain('relu'))
+        init.kaiming_normal_(self.conv2.weight, init.calculate_gain('relu'))
+        init.kaiming_normal_(self.conv3.weight)
