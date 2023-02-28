@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import utils
+
+import os
+
 import torchvision
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -62,3 +67,67 @@ def show_images(data_loader, num_images=2):
             if images_so_far == num_images:
                 plt.show()
                 return
+
+
+def save_plots(history, num_epochs, out_dir):
+    results_dir = utils.get_results_dir(out_dir)
+    epochs = range(1, history['epoch'] + 2)
+
+    print(history['loss'])
+    print(history['val_loss'])
+    print(epochs)
+
+    # Save loss plot
+    fig = plt.figure(figsize=(8, 8))
+    plt.plot(epochs, history['loss'], label='Training Loss')
+    plt.plot(epochs, history['val_loss'], label='Validation Loss')
+    plt.title('Training and Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+
+    plt.xticks(np.arange(0, num_epochs, 2))
+    plt.legend(loc='best')
+
+    fig.savefig(
+        os.path.join(results_dir, f"epoch{history['epoch']}_plot_loss.jpg"))
+    plt.close(fig)
+
+    # Save psnr plot
+    fig = plt.figure(figsize=(8, 8))
+    plt.plot(epochs, history['psnr'], label='Training PSNR')
+    plt.plot(epochs, history['val_psnr'], label='Validation PSNR')
+    plt.title('Training and Validation PSNR')
+    plt.xlabel('Epochs')
+    plt.ylabel('PSNR (dB)')
+
+    plt.xticks(np.arange(0, num_epochs, 2))
+    plt.legend(loc='best')
+
+    fig.savefig(
+        os.path.join(results_dir, f"epoch{history['epoch']}_plot_psnr.jpg"))
+    plt.close(fig)
+
+
+def save_sample_outputs(samples, epoch, out_dir):
+    if not samples:
+        return
+
+    results_dir = utils.get_results_dir(out_dir)
+    fig = plt.figure(figsize=(8, 8))
+    num_images = len(samples)
+
+    idx = 1
+    for sample in samples:
+        _ = plt.subplot(num_images, 3, idx)
+        imshow(sample[0], 'Input LR')
+
+        _ = plt.subplot(num_images, 3, idx + 1)
+        imshow(sample[1], f'Output HR ({sample[3]:.4f} dB)')
+
+        _ = plt.subplot(num_images, 3, idx + 2)
+        imshow(sample[2], 'Original HR')
+
+        idx += 3
+
+    fig.savefig(os.path.join(results_dir, f'epoch{epoch}_sample.jpg'))
+    plt.close(fig)

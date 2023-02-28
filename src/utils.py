@@ -40,18 +40,31 @@ class Params():
         return self.__dict__
 
 
-def save_checkpoint(state, output_dir, is_best=False):
-    filepath = os.path.join(output_dir, 'last.pth.tar')
-    if not os.path.exists(output_dir):
-        print(f'Output directory does not exist. Making directory {output_dir}')
-        os.mkdir(output_dir)
+def save_checkpoint(state,
+                    output_dir,
+                    checkpoint='last.pth.tar',
+                    is_best=False):
+    checkpoint_dir = os.path.join(output_dir, 'checkpoints')
+    filepath = os.path.join(checkpoint_dir, checkpoint)
+    if not os.path.exists(checkpoint_dir):
+        print(f'Making directory {checkpoint_dir}')
+        os.mkdir(checkpoint_dir)
 
     torch.save(state, filepath)
     if is_best:
-        shutil.copyfile(filepath, os.path.join(output_dir, 'best.pth.tar'))
+        shutil.copyfile(filepath, os.path.join(checkpoint_dir, 'best.pth.tar'))
 
 
 def load_checkpoint(checkpoint_path):
     if not os.path.exists(checkpoint_path):
         raise f'File doesn\'t exist {checkpoint_path}'
     return torch.load(checkpoint_path)
+
+
+def get_results_dir(out_dir):
+    results_dir = os.path.join(out_dir, 'results')
+    if not os.path.exists(results_dir):
+        print(f'Making directory {results_dir}')
+        os.mkdir(results_dir)
+
+    return results_dir

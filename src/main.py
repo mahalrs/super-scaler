@@ -31,9 +31,16 @@ parser = argparse.ArgumentParser()
 # parser.add_argument('--dataset',
 #                     default='div2k',
 #                     help='Dataset to use, defined in dataset.py')
-parser.add_argument('--exp_dir',
-                    default='experiments/exp1_srcnn',
-                    help='Directory containing params.json')
+# parser.add_argument('--data_root',
+#                     default='./data',
+#                     help='Directory to download dataset')
+parser.add_argument('--config', help='JSON file containing training arguments')
+parser.add_argument('--out_dir',
+                    default='.',
+                    help='Directory to output images and model checkpoints')
+parser.add_argument('--checkpoint_freq',
+                    default=1,
+                    help='Frequency to save checkpoints and generate results')
 parser.add_argument('--seed', default=123, help='Random seed to use')
 parser.add_argument('--resume',
                     default=None,
@@ -43,10 +50,9 @@ parser.add_argument('--resume',
 def main():
     # Load the parameters from json file
     args = parser.parse_args()
-    json_path = os.path.join(args.exp_dir, 'params.json')
-    assert os.path.isfile(
-        json_path), f'No json configuration file found at {json_path}'
-    params = utils.Params(json_path)
+    assert os.path.isfile(args.config), f'{args.config} file not found.'
+    params = utils.Params(args.config)
+    assert args.checkpoint_freq > 0, 'checkpoint frequency must be > 0'
 
     # Set the random seed for reproducible experiments
     torch.manual_seed(args.seed)
@@ -100,8 +106,9 @@ def main():
                          params.num_epochs,
                          val_loader=val_loader,
                          verbose=1,
-                         output_dir=args.exp_dir,
-                         checkpoint_path=args.resume)
+                         output_dir=args.out_dir,
+                         checkpoint_path=args.resume,
+                         checkpoint_freq=args.checkpoint_freq)
 
 
 if __name__ == '__main__':

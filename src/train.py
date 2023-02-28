@@ -16,6 +16,7 @@ import copy
 import time
 
 import utils
+from visualize import save_plots, save_sample_outputs
 
 import torch
 import torch.nn.functional as F
@@ -26,7 +27,11 @@ from tqdm import tqdm
 def calculate_psnr(batch_pred, batch_gt, max_val=1.0):
     mse = F.mse_loss(batch_pred, batch_gt, reduction='none').mean(dim=(1, 2, 3))
     psnr = 10 * torch.log10(max_val**2 / mse)
-    return psnr.mean().item()
+    return psnr
+
+
+def calculate_batch_psnr(batch_pred, batch_gt, max_val=1.0):
+    return calculate_psnr(batch_pred, batch_gt, max_val).mean().item()
 
 
 def training_step(model, device, data_loader, criterion, optimizer, scheduler):
@@ -59,7 +64,7 @@ def training_step(model, device, data_loader, criterion, optimizer, scheduler):
 
         # statistics
         running_loss += loss.item()
-        running_psnr += calculate_psnr(outputs, targets)
+        running_psnr += calculate_batch_psnr(outputs, targets)
 
     scheduler.step()
 
@@ -80,7 +85,8 @@ def train(model,
           val_loader=None,
           verbose=1,
           output_dir='./',
-          checkpoint_path=None):
+          checkpoint_path=None,
+          checkpoint_freq=1):
 
     history = make_new_history_obj(model, optimizer, scheduler,
                                    (val_loader is not None), checkpoint_path)
@@ -116,13 +122,22 @@ def train(model,
         if verbose:
             print(log_info, end='\n\n')
 
-        # Save checkpoint
-        history['model_state_dict'] = model.state_dict()
-        history['optimizer_state_dict'] = optimizer.state_dict()
-        history['scheduler_state_dict'] = scheduler.state_dict()
-        history['epoch'] = epoch
+        # Save checkpoint and output results
+        if is_best_model or epoch % checkpoint_freq == checkpoint_freq - 1:
+            history['model_state_dict'] = model.state_dict()
+            history['optimizer_state_dict'] = optimizer.state_dict()
+            history['scheduler_state_dict'] = scheduler.state_dict()
+            history['epoch'] = epoch
 
-        utils.save_checkpoint(history, output_dir, is_best=is_best_model)
+            utils.save_checkpoint(history,
+                                  output_dir,
+                                  f'checkpoint_{epoch}.pth.tar',
+                                  is_best=is_best_model)
+
+            if val_loader:
+                save_plots(history, num_epochs, output_dir)
+                samples = get_sample_outputs(model, device, val_loader)
+                save_sample_outputs(samples, epoch, output_dir)
 
     end = time.time() - start
     print(f'Finished training: {end // 60:.0f}m {end % 60:.0f}')
@@ -158,7 +173,7 @@ def evaluate(model, device, data_loader, criterion):
 
             # statistics
             running_loss += loss.item()
-            running_psnr += calculate_psnr(outputs, targets)
+            running_psnr += calculate_batch_psnr(outputs, targets)
 
         model.train(mode=was_training)
 
@@ -167,6 +182,31 @@ def evaluate(model, device, data_loader, criterion):
     avg_psnr = running_psnr / len(data_loader)
 
     return avg_loss, avg_psnr
+
+
+def get_sample_outputs(model, device, data_loader, num_images=3):
+    was_training = model.training
+    model.eval()
+
+    samples = []
+    with torch.no_grad():
+        for inputs, targets in data_loader:
+            inputs, targets = inputs.to(device), targets.to(device)
+
+            outputs = model(inputs)
+
+            for j in range(inputs.size()[0]):
+                psnr_scores = calculate_psnr(inputs, outputs)
+
+                samples.append((inputs.cpu().data[j], outputs.cpu().data[j],
+                                targets.cpu().data[j], psnr_scores[j]))
+
+                if len(samples) == num_images:
+                    model.train(mode=was_training)
+                    return samples
+
+        model.train(mode=was_training)
+    return samples
 
 
 def make_new_history_obj(model,
