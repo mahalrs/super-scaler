@@ -44,36 +44,44 @@ class Div2kDataset(Dataset):
             return None
 
 
-def input_transform(size, crop_size):
+def input_transform(size, crop_size, scale):
     return transforms.Compose([
-        transforms.Resize(size),
+        transforms.Resize(crop_size),
         transforms.CenterCrop(crop_size),
+        transforms.Resize(crop_size // scale,
+                          interpolation=transforms.InterpolationMode.BICUBIC),
+        transforms.Resize(size),
         transforms.ToTensor(),
-        # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
 
 
 def target_transform(size, crop_size):
     return transforms.Compose([
-        transforms.Resize(size),
+        transforms.Resize(crop_size),
         transforms.CenterCrop(crop_size),
+        transforms.Resize(size),
         transforms.ToTensor(),
-        # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
 
 
-def get_training_set(input_size, input_crop_size, output_size,
-                     output_crop_size):
+def bicubic_transform(img, size):
+    return transforms.Resize(
+        size, interpolation=transforms.InterpolationMode.BICUBIC)(img)
+
+
+def get_training_set(input_size, output_size, crop_size, scale):
     hf_set = load_dataset('eugenesiow/Div2k', 'bicubic_x4', split='train')
-    train_set = Div2kDataset(hf_set, input_transform(input_size,
-                                                     input_crop_size),
-                             target_transform(output_size, output_crop_size))
+    train_set = Div2kDataset(hf_set,
+                             input_transform(input_size, crop_size, scale),
+                             target_transform(output_size, crop_size))
     return train_set
 
 
-def get_validation_set(input_size, input_crop_size, output_size,
-                       output_crop_size):
+def get_validation_set(input_size, output_size, crop_size, scale):
     hf_set = load_dataset('eugenesiow/Div2k', 'bicubic_x4', split='validation')
-    val_set = Div2kDataset(hf_set, input_transform(input_size, input_crop_size),
-                           target_transform(output_size, output_crop_size))
+    val_set = Div2kDataset(hf_set, input_transform(input_size, crop_size,
+                                                   scale),
+                           target_transform(output_size, crop_size))
     return val_set

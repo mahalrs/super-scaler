@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import utils
-
 import os
+
+import utils
+from dataset import bicubic_transform
 
 import torchvision
 
@@ -23,7 +24,7 @@ import numpy as np
 
 
 def imshow(img, title=None):
-    # img = img / 2 + 0.5  # unnormalize
+    img = img / 2 + 0.5  # unnormalize
     npimg = img.numpy()
     img = np.transpose(npimg, (1, 2, 0))
     plt.imshow(img)
@@ -114,11 +115,19 @@ def save_sample_outputs(samples, epoch, out_dir):
 
     idx = 1
     for sample in samples:
+        # resize input image to match output size using bicubic interpolation
+        bicubic = bicubic_transform(sample[0], sample[1].shape[1])
+
+        bicubic_psnr = utils.calculate_batch_psnr(bicubic.unsqueeze(0),
+                                                  sample[2].unsqueeze(0))
+        output_psnr = utils.calculate_batch_psnr(sample[1].unsqueeze(0),
+                                                 sample[2].unsqueeze(0))
+
         _ = plt.subplot(num_images, 3, idx)
-        imshow(sample[0], 'Input LR')
+        imshow(bicubic, f'Bicubic ({bicubic_psnr:.4f} dB)')
 
         _ = plt.subplot(num_images, 3, idx + 1)
-        imshow(sample[1], f'Output HR ({sample[3]:.4f} dB)')
+        imshow(sample[1], f'Output HR ({output_psnr:.4f} dB)')
 
         _ = plt.subplot(num_images, 3, idx + 2)
         imshow(sample[2], 'Original HR')

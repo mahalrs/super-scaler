@@ -19,6 +19,7 @@ import shutil
 import time
 
 import torch
+import torch.nn.functional as F
 
 
 class Params():
@@ -40,6 +41,16 @@ class Params():
     @property
     def dict(self):
         return self.__dict__
+
+
+def calculate_psnr(batch_pred, batch_gt, max_val=1.0):
+    mse = F.mse_loss(batch_pred, batch_gt, reduction='none').mean(dim=(1, 2, 3))
+    psnr = 10 * torch.log10(max_val**2 / mse)
+    return psnr
+
+
+def calculate_batch_psnr(batch_pred, batch_gt, max_val=1.0):
+    return calculate_psnr(batch_pred, batch_gt, max_val).mean().item()
 
 
 def save_checkpoint(state,

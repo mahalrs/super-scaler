@@ -19,19 +19,7 @@ import utils
 from visualize import save_plots, save_sample_outputs
 
 import torch
-import torch.nn.functional as F
-
 from tqdm import tqdm
-
-
-def calculate_psnr(batch_pred, batch_gt, max_val=1.0):
-    mse = F.mse_loss(batch_pred, batch_gt, reduction='none').mean(dim=(1, 2, 3))
-    psnr = 10 * torch.log10(max_val**2 / mse)
-    return psnr
-
-
-def calculate_batch_psnr(batch_pred, batch_gt, max_val=1.0):
-    return calculate_psnr(batch_pred, batch_gt, max_val).mean().item()
 
 
 def training_step(model, device, data_loader, criterion, optimizer, scheduler):
@@ -64,7 +52,7 @@ def training_step(model, device, data_loader, criterion, optimizer, scheduler):
 
         # statistics
         running_loss += loss.item()
-        running_psnr += calculate_batch_psnr(outputs, targets)
+        running_psnr += utils.calculate_batch_psnr(outputs, targets)
 
     scheduler.step()
 
@@ -173,7 +161,7 @@ def evaluate(model, device, data_loader, criterion):
 
             # statistics
             running_loss += loss.item()
-            running_psnr += calculate_batch_psnr(outputs, targets)
+            running_psnr += utils.calculate_batch_psnr(outputs, targets)
 
         model.train(mode=was_training)
 
@@ -196,10 +184,8 @@ def get_sample_outputs(model, device, data_loader, num_images=3):
             outputs = model(inputs)
 
             for j in range(inputs.size()[0]):
-                psnr_scores = calculate_psnr(outputs, targets)
-
                 samples.append((inputs.cpu().data[j], outputs.cpu().data[j],
-                                targets.cpu().data[j], psnr_scores[j]))
+                                targets.cpu().data[j]))
 
                 if len(samples) == num_images:
                     model.train(mode=was_training)
