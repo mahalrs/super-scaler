@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import json
 import os
 import shutil
+import time
 
 import torch
 
@@ -68,3 +70,18 @@ def get_results_dir(out_dir):
         os.mkdir(results_dir)
 
     return results_dir
+
+
+def get_timestamp():
+    datetime_obj = datetime.datetime.fromtimestamp(time.time())
+    return datetime_obj.strftime('%Y_%m_%d_%H_%M_%S')
+
+
+def save_history(history, output_dir):
+    logs_dir = os.path.join(output_dir, 'logs')
+    if not os.path.exists(logs_dir):
+        print(f'Making directory {logs_dir}')
+        os.mkdir(logs_dir)
+
+    filename = f'train_history_{get_timestamp()}.pckl'
+    torch.save(history, os.path.join(logs_dir, filename))

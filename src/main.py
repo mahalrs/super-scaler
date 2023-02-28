@@ -118,6 +118,9 @@ def main():
                          checkpoint_path=args.resume,
                          checkpoint_freq=args.checkpoint_freq)
 
+    # Save history
+    utils.save_history(history, args.out_dir)
+
 
 if __name__ == '__main__':
     main()
