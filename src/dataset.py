@@ -62,15 +62,18 @@ def target_transform(size, crop_size):
     ])
 
 
-def get_training_set(size, crop_size):
+def get_training_set(input_size, input_crop_size, output_size,
+                     output_crop_size):
     hf_set = load_dataset('eugenesiow/Div2k', 'bicubic_x4', split='train')
-    train_set = Div2kDataset(hf_set, input_transform(size, crop_size),
-                             target_transform(size, crop_size))
+    train_set = Div2kDataset(hf_set, input_transform(input_size,
+                                                     input_crop_size),
+                             target_transform(output_size, output_crop_size))
     return train_set
 
 
-def get_validation_set(size, crop_size):
+def get_validation_set(input_size, input_crop_size, output_size,
+                       output_crop_size):
     hf_set = load_dataset('eugenesiow/Div2k', 'bicubic_x4', split='validation')
-    val_set = Div2kDataset(hf_set, input_transform(size, crop_size),
-                           target_transform(size, crop_size))
+    val_set = Div2kDataset(hf_set, input_transform(input_size, input_crop_size),
+                           target_transform(output_size, output_crop_size))
     return val_set

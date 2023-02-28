@@ -13,5 +13,6 @@
 # limitations under the License.
 
 from .srcnn import SRCNN
+from .espcn import ESPCN
 
-__all__ = ['SRCNN']
+__all__ = ['SRCNN', 'ESPCN']

@@ -17,7 +17,7 @@ import os
 
 import utils
 from dataset import get_training_set, get_validation_set
-from models import SRCNN
+from models import SRCNN, ESPCN
 from train import train
 
 import torch
@@ -64,14 +64,16 @@ def main():
     if torch.backends.mps.is_available():
         params.device = torch.device('mps')
 
-    train_set = get_training_set(params.input_size, params.crop_size)
+    train_set = get_training_set(params.input_size, params.input_crop_size,
+                                 params.output_size, params.output_crop_size)
     train_loader = DataLoader(train_set,
                               batch_size=params.batch_size,
                               shuffle=True,
                               num_workers=params.num_workers,
                               pin_memory=True)
 
-    val_set = get_validation_set(params.input_size, params.crop_size)
+    val_set = get_validation_set(params.input_size, params.input_crop_size,
+                                 params.output_size, params.output_crop_size)
     val_loader = DataLoader(val_set,
                             batch_size=params.batch_size,
                             shuffle=True,
@@ -79,7 +81,13 @@ def main():
                             pin_memory=True)
 
     # Instantiate a neural network model
-    net = SRCNN()
+    net = None
+    if params.model_name == 'srcnn':
+        net = SRCNN()
+    elif params.model_name == 'espcn':
+        net = ESPCN(params.upscale_factor)
+    else:
+        raise f'{params.model_name} model not implemented.'
 
     if torch.cuda.device_count() > 1:
         print('Using', torch.cuda.device_count(), 'GPUs')
