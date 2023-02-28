@@ -196,7 +196,7 @@ def get_sample_outputs(model, device, data_loader, num_images=3):
             outputs = model(inputs)
 
             for j in range(inputs.size()[0]):
-                psnr_scores = calculate_psnr(inputs, outputs)
+                psnr_scores = calculate_psnr(outputs, targets)
 
                 samples.append((inputs.cpu().data[j], outputs.cpu().data[j],
                                 targets.cpu().data[j], psnr_scores[j]))
