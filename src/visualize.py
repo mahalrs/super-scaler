@@ -73,10 +73,6 @@ def save_plots(history, num_epochs, out_dir):
     results_dir = utils.get_results_dir(out_dir)
     epochs = range(1, history['epoch'] + 2)
 
-    print(history['loss'])
-    print(history['val_loss'])
-    print(epochs)
-
     # Save loss plot
     fig = plt.figure(figsize=(8, 8))
     plt.plot(epochs, history['loss'], label='Training Loss')
