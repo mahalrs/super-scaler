@@ -64,6 +64,7 @@ def main():
         'cuda:0' if torch.cuda.is_available() else 'cpu')
     if torch.backends.mps.is_available():
         params.device = torch.device('mps')
+    print(params.device)
 
     train_set = get_training_set(params.dataset, params.input_size,
                                  params.output_size, params.crop_size,
