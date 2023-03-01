@@ -40,8 +40,9 @@ parser.add_argument('--out_dir',
                     help='Directory to output images and model checkpoints')
 parser.add_argument('--checkpoint_freq',
                     default=1,
+                    type=int,
                     help='Frequency to save checkpoints and generate results')
-parser.add_argument('--seed', default=123, help='Random seed to use')
+parser.add_argument('--seed', default=123, type=int, help='Random seed to use')
 parser.add_argument('--resume',
                     default=None,
                     help='Optional, path to checkpoint')
