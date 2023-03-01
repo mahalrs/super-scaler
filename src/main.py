@@ -66,9 +66,15 @@ def main():
         params.device = torch.device('mps')
     print(params.device)
 
+    blur = True
+    try:
+        blur = params.blur
+    except:
+        pass
+
     train_set = get_training_set(params.dataset, params.input_size,
                                  params.output_size, params.crop_size,
-                                 params.upscale_factor)
+                                 params.upscale_factor, blur)
     train_loader = DataLoader(train_set,
                               batch_size=params.batch_size,
                               shuffle=True,
@@ -77,7 +83,7 @@ def main():
 
     val_set = get_validation_set(params.dataset, params.input_size,
                                  params.output_size, params.crop_size,
-                                 params.upscale_factor)
+                                 params.upscale_factor, blur)
     val_loader = DataLoader(val_set,
                             batch_size=params.valbatch_size,
                             shuffle=True,

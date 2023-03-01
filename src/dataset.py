@@ -87,13 +87,25 @@ class Div2kFromFolder(Dataset):
             return None
 
 
-def input_transform(size, crop_size, scale):
+def input_transform(size, crop_size, scale, blur):
+    if blur:
+        return transforms.Compose([
+            transforms.Resize(crop_size),
+            transforms.CenterCrop(crop_size),
+            transforms.Resize(
+                crop_size // scale,
+                interpolation=transforms.InterpolationMode.BICUBIC),
+            transforms.GaussianBlur(kernel_size=5, sigma=1.0),
+            transforms.Resize(size),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        ])
+
     return transforms.Compose([
         transforms.Resize(crop_size),
         transforms.CenterCrop(crop_size),
         transforms.Resize(crop_size // scale,
                           interpolation=transforms.InterpolationMode.BICUBIC),
-        transforms.GaussianBlur(kernel_size=5, sigma=1.0),
         transforms.Resize(size),
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -115,11 +127,11 @@ def bicubic_transform(img, size):
         size, interpolation=transforms.InterpolationMode.BICUBIC)(img)
 
 
-def get_training_set(dataset, input_size, output_size, crop_size, scale):
+def get_training_set(dataset, input_size, output_size, crop_size, scale, blur):
     hf_set = load_dataset('eugenesiow/Div2k', 'bicubic_x4', split='train')
     if dataset == 'div2k':
-        return Div2kDataset(hf_set, input_transform(input_size, crop_size,
-                                                    scale),
+        return Div2kDataset(hf_set,
+                            input_transform(input_size, crop_size, scale, blur),
                             target_transform(output_size, crop_size))
 
     # TODO: FixMe
@@ -128,16 +140,18 @@ def get_training_set(dataset, input_size, output_size, crop_size, scale):
     tar_dir = './data/div2kpatch/train/hr'
 
     if dataset == 'div2kpatch':
-        return Div2kFromFolder(inp_dir, tar_dir,
-                               input_transform(input_size, crop_size, scale),
-                               target_transform(output_size, crop_size))
+        return Div2kFromFolder(
+            inp_dir, tar_dir, input_transform(input_size, crop_size, scale,
+                                              blur),
+            target_transform(output_size, crop_size))
 
 
-def get_validation_set(dataset, input_size, output_size, crop_size, scale):
+def get_validation_set(dataset, input_size, output_size, crop_size, scale,
+                       blur):
     hf_set = load_dataset('eugenesiow/Div2k', 'bicubic_x4', split='validation')
     if dataset == 'div2k':
-        return Div2kDataset(hf_set, input_transform(input_size, crop_size,
-                                                    scale),
+        return Div2kDataset(hf_set,
+                            input_transform(input_size, crop_size, scale, blur),
                             target_transform(output_size, crop_size))
 
     # TODO: FixMe
@@ -146,6 +160,7 @@ def get_validation_set(dataset, input_size, output_size, crop_size, scale):
     tar_dir = './data/div2kpatch/val/hr'
 
     if dataset == 'div2kpatch':
-        return Div2kFromFolder(inp_dir, tar_dir,
-                               input_transform(input_size, crop_size, scale),
-                               target_transform(output_size, crop_size))
+        return Div2kFromFolder(
+            inp_dir, tar_dir, input_transform(input_size, crop_size, scale,
+                                              blur),
+            target_transform(output_size, crop_size))
