@@ -64,16 +64,18 @@ def main():
     if torch.backends.mps.is_available():
         params.device = torch.device('mps')
 
-    train_set = get_training_set(params.input_size, params.output_size,
-                                 params.crop_size, params.upscale_factor)
+    train_set = get_training_set(params.dataset, params.input_size,
+                                 params.output_size, params.crop_size,
+                                 params.upscale_factor)
     train_loader = DataLoader(train_set,
                               batch_size=params.batch_size,
                               shuffle=True,
                               num_workers=params.num_workers,
                               pin_memory=True)
 
-    val_set = get_validation_set(params.input_size, params.output_size,
-                                 params.crop_size, params.upscale_factor)
+    val_set = get_validation_set(params.dataset, params.input_size,
+                                 params.output_size, params.crop_size,
+                                 params.upscale_factor)
     val_loader = DataLoader(val_set,
                             batch_size=params.valbatch_size,
                             shuffle=True,
