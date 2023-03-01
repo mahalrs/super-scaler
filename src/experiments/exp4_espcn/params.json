@@ -1,10 +1,10 @@
 {
     "model_name": "espcn",
-    "dataset": "div2k",
+    "dataset": "div2kpatch",
     "upscale_factor": 4,
     "learning_rate": 1e-1,
-    "batch_size": 64,
-    "valbatch_size": 16,
+    "batch_size": 128,
+    "valbatch_size": 100,
     "num_epochs": 100,
     "milestones": [32, 64, 72, 88],
     "gamma": 0.1,

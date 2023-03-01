@@ -101,10 +101,10 @@ def main():
     criterion = nn.MSELoss()
     optimizer = optim.Adam(net.parameters(), lr=params.learning_rate)
 
-    # Decay LR by a factor of gamma every step_size epochs
-    scheduler = optim.lr_scheduler.StepLR(optimizer,
-                                          step_size=params.step_size,
-                                          gamma=params.gamma)
+    # Decay LR by a factor of gamma every milestone
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer,
+                                               milestones=params.milestones,
+                                               gamma=params.gamma)
 
     # Train and evaluate the model
     history, net = train(net,

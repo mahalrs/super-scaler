@@ -82,7 +82,7 @@ def save_plots(history, num_epochs, out_dir):
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
 
-    plt.xticks(np.arange(0, num_epochs, 2))
+    plt.xticks(np.arange(0, num_epochs, num_epochs * 0.1))
     plt.legend(loc='best')
 
     fig.savefig(
@@ -97,7 +97,7 @@ def save_plots(history, num_epochs, out_dir):
     plt.xlabel('Epochs')
     plt.ylabel('PSNR (dB)')
 
-    plt.xticks(np.arange(0, num_epochs, 2))
+    plt.xticks(np.arange(0, num_epochs, num_epochs * 0.1))
     plt.legend(loc='best')
 
     fig.savefig(
